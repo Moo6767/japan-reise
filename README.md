@@ -21,15 +21,15 @@
             color: #fff;
         }
 
-        /* Loading state */
         #root {
+            min-height: 100vh;
+        }
+
+        .loading {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .loading {
             text-align: center;
             color: #888;
         }
@@ -47,20 +47,39 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Dark dropdown styling */
+        select {
+            background-color: #1a1a2e !important;
+            color: #fff !important;
+        }
+
+        select option {
+            background-color: #1a1a2e;
+            color: #fff;
+            padding: 10px;
+        }
+
+        select option:hover,
+        select option:checked {
+            background-color: #2a2a4e;
+        }
     </style>
 </head>
 <body>
     <div id="root">
         <div class="loading">
-            <div class="loading-spinner"></div>
-            <div>Lädt...</div>
+            <div>
+                <div class="loading-spinner"></div>
+                <div>Lädt...</div>
+            </div>
         </div>
     </div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Initial travel data - you can modify this!
+        // Initial travel data
         const initialDays = [
             { id: 1, date: '8. Mai', weekday: 'Do', city: 'Tokio', title: 'Ankunft', highlights: ['✈️ Anreise', 'Check-in', 'Spaziergang'] },
             { id: 2, date: '9. Mai', weekday: 'Fr', city: 'Tokio', title: 'Shinjuku & Shibuya', highlights: ['Meiji-Schrein', 'Harajuku', 'Omotesandō', 'Shibuya Crossing'] },
@@ -81,30 +100,41 @@
             { id: 17, date: '24. Mai', weekday: 'Sa', city: 'Abreise', title: 'Heimreise', highlights: ['✈️ Kansai Airport'] },
         ];
 
-        const cityColors = {
-            'Tokio': '#ff6b6b',
-            'Hakone': '#4ecdc4',
-            'Kyoto': '#ffd93d',
-            'Hiroshima': '#f38181',
-            'Osaka': '#95e1d3',
-            'Nara': '#dda0dd',
-            'Kobe': '#87ceeb',
-            'Abreise': '#888888',
+        // Default cities with colors and icons
+        const defaultCities = {
+            'Tokio': { color: '#ff6b6b', icon: '🗼' },
+            'Hakone': { color: '#4ecdc4', icon: '🗻' },
+            'Kyoto': { color: '#ffd93d', icon: '⛩️' },
+            'Hiroshima': { color: '#f38181', icon: '🕊️' },
+            'Osaka': { color: '#95e1d3', icon: '🏯' },
+            'Nara': { color: '#dda0dd', icon: '🦌' },
+            'Kobe': { color: '#87ceeb', icon: '🌉' },
+            'Nagoya': { color: '#f0e68c', icon: '🏙️' },
+            'Kanazawa': { color: '#98d8c8', icon: '🎎' },
+            'Nikko': { color: '#c9b1ff', icon: '🌲' },
+            'Kamakura': { color: '#ffb347', icon: '🗿' },
+            'Yokohama': { color: '#77dd77', icon: '🎡' },
+            'Abreise': { color: '#888888', icon: '✈️' },
+            'Ankunft': { color: '#888888', icon: '✈️' },
         };
 
-        const cityIcons = {
-            'Tokio': '🗼',
-            'Hakone': '🗻',
-            'Kyoto': '⛩️',
-            'Hiroshima': '🕊️',
-            'Osaka': '🏯',
-            'Nara': '🦌',
-            'Kobe': '🌉',
-            'Abreise': '✈️',
-        };
+        // Available colors for custom cities
+        const availableColors = [
+            '#ff6b6b', '#4ecdc4', '#ffd93d', '#f38181', '#95e1d3',
+            '#dda0dd', '#87ceeb', '#f0e68c', '#98d8c8', '#c9b1ff',
+            '#ffb347', '#77dd77', '#ff9ff3', '#54a0ff', '#5f27cd',
+            '#00d2d3', '#ff9f43', '#ee5a24', '#686de0', '#badc58'
+        ];
+
+        // Available icons
+        const availableIcons = [
+            '🏙️', '🌸', '🎌', '🏯', '⛩️', '🗼', '🗻', '🌊', '🚄', '🎎',
+            '🍜', '🍣', '🎋', '🌲', '🏖️', '🌅', '⛰️', '🎡', '🗿', '🦌',
+            '🕊️', '🌉', '✈️', '🚢', '🎭', '🎪', '🏛️', '⭐', '💫', '🌟'
+        ];
 
         // LocalStorage helpers
-        const STORAGE_KEY = 'japan-reise-data';
+        const STORAGE_KEY = 'japan-reise-data-v2';
         
         const loadFromStorage = () => {
             try {
@@ -113,18 +143,19 @@
                     const data = JSON.parse(saved);
                     return {
                         days: data.days || initialDays,
-                        title: data.title || 'Japan-Rundreise 2025'
+                        title: data.title || 'Japan-Rundreise 2025',
+                        customCities: data.customCities || {}
                     };
                 }
             } catch (e) {
                 console.log('Could not load from storage');
             }
-            return { days: initialDays, title: 'Japan-Rundreise 2025' };
+            return { days: initialDays, title: 'Japan-Rundreise 2025', customCities: {} };
         };
 
-        const saveToStorage = (days, title) => {
+        const saveToStorage = (days, title, customCities) => {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ days, title }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ days, title, customCities }));
             } catch (e) {
                 console.log('Could not save to storage');
             }
@@ -136,12 +167,23 @@
             const [editForm, setEditForm] = useState({});
             const [tripTitle, setTripTitle] = useState(() => loadFromStorage().title);
             const [editingTitle, setEditingTitle] = useState(false);
-            const [showExport, setShowExport] = useState(false);
+            const [customCities, setCustomCities] = useState(() => loadFromStorage().customCities);
+            const [showAddCity, setShowAddCity] = useState(false);
+            const [newCityName, setNewCityName] = useState('');
+            const [newCityColor, setNewCityColor] = useState(availableColors[0]);
+            const [newCityIcon, setNewCityIcon] = useState(availableIcons[0]);
+            const [editingRoute, setEditingRoute] = useState(null);
+
+            // Merge default and custom cities
+            const allCities = { ...defaultCities, ...customCities };
 
             // Save to localStorage whenever data changes
             useEffect(() => {
-                saveToStorage(days, tripTitle);
-            }, [days, tripTitle]);
+                saveToStorage(days, tripTitle, customCities);
+            }, [days, tripTitle, customCities]);
+
+            const getColor = (city) => allCities[city]?.color || '#888888';
+            const getIcon = (city) => allCities[city]?.icon || '📍';
 
             const handleEdit = (day) => {
                 setEditingDay(day.id);
@@ -199,15 +241,40 @@
                 setDays(newDays);
             };
 
+            const addCustomCity = () => {
+                if (newCityName.trim()) {
+                    setCustomCities({
+                        ...customCities,
+                        [newCityName.trim()]: { color: newCityColor, icon: newCityIcon }
+                    });
+                    setNewCityName('');
+                    setShowAddCity(false);
+                }
+            };
+
+            const deleteCustomCity = (cityName) => {
+                if (confirm(`Stadt "${cityName}" wirklich löschen?`)) {
+                    const updated = { ...customCities };
+                    delete updated[cityName];
+                    setCustomCities(updated);
+                }
+            };
+
+            const updateCityInRoute = (oldCity, newCity) => {
+                setDays(days.map(d => d.city === oldCity ? { ...d, city: newCity } : d));
+                setEditingRoute(null);
+            };
+
             const resetData = () => {
                 if (confirm('Alle Änderungen zurücksetzen?')) {
                     setDays(initialDays);
                     setTripTitle('Japan-Rundreise 2025');
+                    setCustomCities({});
                 }
             };
 
             const exportData = () => {
-                const dataStr = JSON.stringify({ days, title: tripTitle }, null, 2);
+                const dataStr = JSON.stringify({ days, title: tripTitle, customCities }, null, 2);
                 const blob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -225,6 +292,7 @@
                             const data = JSON.parse(event.target.result);
                             if (data.days) setDays(data.days);
                             if (data.title) setTripTitle(data.title);
+                            if (data.customCities) setCustomCities(data.customCities);
                             alert('Import erfolgreich!');
                         } catch (err) {
                             alert('Fehler beim Import');
@@ -235,11 +303,8 @@
             };
 
             // Calculate stats
-            const cities = [...new Set(days.filter(d => d.city !== 'Abreise').map(d => d.city))];
+            const cities = [...new Set(days.filter(d => d.city !== 'Abreise' && d.city !== 'Ankunft').map(d => d.city))];
             const nights = days.length - 1;
-
-            const getColor = (city) => cityColors[city] || '#888888';
-            const getIcon = (city) => cityIcons[city] || '📍';
 
             const styles = {
                 container: {
@@ -274,6 +339,21 @@
                     fontSize: '0.9rem',
                     width: '100%'
                 },
+                select: {
+                    background: '#1a1a2e',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#fff',
+                    fontSize: '0.9rem',
+                    width: '100%',
+                    cursor: 'pointer',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    paddingRight: '35px'
+                },
                 button: {
                     background: 'rgba(255,255,255,0.05)',
                     border: 'none',
@@ -298,6 +378,26 @@
                     borderRadius: '15px',
                     padding: '18px',
                     transition: 'all 0.3s ease'
+                },
+                modal: {
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                },
+                modalContent: {
+                    background: '#1a1a2e',
+                    borderRadius: '20px',
+                    padding: '25px',
+                    maxWidth: '450px',
+                    width: '90%',
+                    border: '1px solid rgba(255,255,255,0.1)'
                 }
             };
 
@@ -319,6 +419,7 @@
                                         border: '2px solid #ff6b6b'
                                     }}
                                     autoFocus
+                                    onKeyDown={(e) => e.key === 'Enter' && setEditingTitle(false)}
                                 />
                                 <button onClick={() => setEditingTitle(false)} style={{
                                     ...styles.saveButton,
@@ -358,6 +459,9 @@
 
                         {/* Action buttons */}
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
+                            <button onClick={() => setShowAddCity(true)} style={{ ...styles.button, background: 'rgba(149,225,211,0.2)', color: '#95e1d3' }}>
+                                🏙️ Stadt hinzufügen
+                            </button>
                             <button onClick={exportData} style={{ ...styles.button, background: 'rgba(78,205,196,0.2)', color: '#4ecdc4' }}>
                                 💾 Exportieren
                             </button>
@@ -372,11 +476,13 @@
                     </header>
 
                     {/* Route Overview */}
-                    <div style={{
-                        ...styles.card,
-                        marginBottom: '25px'
-                    }}>
-                        <h2 style={{ color: '#ffd93d', marginBottom: '15px', fontSize: '1.1rem' }}>🗾 Route</h2>
+                    <div style={{ ...styles.card, marginBottom: '25px' }}>
+                        <h2 style={{ color: '#ffd93d', marginBottom: '15px', fontSize: '1.1rem' }}>
+                            🗾 Route 
+                            <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: '10px' }}>
+                                (Klicke auf eine Stadt zum Ändern)
+                            </span>
+                        </h2>
                         <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -386,23 +492,30 @@
                         }}>
                             {cities.map((city, i) => (
                                 <React.Fragment key={city}>
-                                    <div style={{
-                                        background: `${getColor(city)}22`,
-                                        border: `2px solid ${getColor(city)}`,
-                                        borderRadius: '12px',
-                                        padding: '10px 16px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}>
+                                    <div 
+                                        onClick={() => setEditingRoute(city)}
+                                        style={{
+                                            background: `${getColor(city)}22`,
+                                            border: `2px solid ${getColor(city)}`,
+                                            borderRadius: '12px',
+                                            padding: '10px 16px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
                                         <span style={{ fontSize: '1.2rem' }}>{getIcon(city)}</span>
                                         <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{city}</span>
                                         <span style={{ 
-                                            background: 'rgba(255,255,255,0.1)', 
+                                            background: 'rgba(255,255,255,0.15)', 
                                             padding: '2px 8px', 
                                             borderRadius: '10px',
                                             fontSize: '0.7rem',
-                                            color: '#aaa'
+                                            color: '#fff'
                                         }}>
                                             {days.filter(d => d.city === city).length}
                                         </span>
@@ -459,9 +572,9 @@
                                             <select
                                                 value={editForm.city}
                                                 onChange={(e) => setEditForm({...editForm, city: e.target.value})}
-                                                style={styles.input}
+                                                style={styles.select}
                                             >
-                                                {Object.keys(cityColors).map(c => (
+                                                {Object.keys(allCities).map(c => (
                                                     <option key={c} value={c}>{getIcon(c)} {c}</option>
                                                 ))}
                                             </select>
@@ -584,6 +697,42 @@
                         </div>
                     </div>
 
+                    {/* Custom Cities List */}
+                    {Object.keys(customCities).length > 0 && (
+                        <div style={{ ...styles.card, marginBottom: '20px' }}>
+                            <h3 style={{ color: '#95e1d3', marginBottom: '15px', fontSize: '1rem' }}>
+                                🏙️ Eigene Städte
+                            </h3>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                {Object.entries(customCities).map(([name, data]) => (
+                                    <div key={name} style={{
+                                        background: `${data.color}22`,
+                                        border: `1px solid ${data.color}`,
+                                        borderRadius: '8px',
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}>
+                                        <span>{data.icon}</span>
+                                        <span>{name}</span>
+                                        <button 
+                                            onClick={() => deleteCustomCity(name)}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#ff6b6b',
+                                                cursor: 'pointer',
+                                                padding: '2px 5px',
+                                                fontSize: '0.8rem'
+                                            }}
+                                        >✕</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Tips */}
                     <div style={{
                         display: 'grid',
@@ -620,6 +769,149 @@
                     }}>
                         Japan-Reiseplaner • Daten werden im Browser gespeichert
                     </footer>
+
+                    {/* Add City Modal */}
+                    {showAddCity && (
+                        <div style={styles.modal} onClick={() => setShowAddCity(false)}>
+                            <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                                <h3 style={{ marginBottom: '20px', color: '#95e1d3' }}>🏙️ Neue Stadt hinzufügen</h3>
+                                
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label style={{ display: 'block', marginBottom: '5px', color: '#888', fontSize: '0.85rem' }}>
+                                        Stadtname
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newCityName}
+                                        onChange={(e) => setNewCityName(e.target.value)}
+                                        placeholder="z.B. Fukuoka"
+                                        style={styles.input}
+                                        autoFocus
+                                    />
+                                </div>
+                                
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', color: '#888', fontSize: '0.85rem' }}>
+                                        Icon auswählen
+                                    </label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {availableIcons.map(icon => (
+                                            <button
+                                                key={icon}
+                                                onClick={() => setNewCityIcon(icon)}
+                                                style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    fontSize: '1.3rem',
+                                                    background: newCityIcon === icon ? 'rgba(149,225,211,0.3)' : 'rgba(255,255,255,0.05)',
+                                                    border: newCityIcon === icon ? '2px solid #95e1d3' : '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >{icon}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', color: '#888', fontSize: '0.85rem' }}>
+                                        Farbe auswählen
+                                    </label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {availableColors.map(color => (
+                                            <button
+                                                key={color}
+                                                onClick={() => setNewCityColor(color)}
+                                                style={{
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    background: color,
+                                                    border: newCityColor === color ? '3px solid #fff' : '2px solid transparent',
+                                                    borderRadius: '50%',
+                                                    cursor: 'pointer',
+                                                    boxShadow: newCityColor === color ? '0 0 10px ' + color : 'none'
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                {/* Preview */}
+                                {newCityName && (
+                                    <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
+                                        <div style={{ color: '#666', fontSize: '0.75rem', marginBottom: '8px' }}>Vorschau:</div>
+                                        <div style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            background: `${newCityColor}22`,
+                                            border: `2px solid ${newCityColor}`,
+                                            borderRadius: '12px',
+                                            padding: '10px 16px'
+                                        }}>
+                                            <span style={{ fontSize: '1.2rem' }}>{newCityIcon}</span>
+                                            <span style={{ fontWeight: 'bold' }}>{newCityName}</span>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button 
+                                        onClick={addCustomCity}
+                                        disabled={!newCityName.trim()}
+                                        style={{
+                                            ...styles.saveButton,
+                                            opacity: newCityName.trim() ? 1 : 0.5
+                                        }}
+                                    >
+                                        ➕ Hinzufügen
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowAddCity(false)}
+                                        style={{ ...styles.button, padding: '10px 20px' }}
+                                    >
+                                        Abbrechen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Edit Route Modal */}
+                    {editingRoute && (
+                        <div style={styles.modal} onClick={() => setEditingRoute(null)}>
+                            <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                                <h3 style={{ marginBottom: '20px', color: '#ffd93d' }}>
+                                    {getIcon(editingRoute)} {editingRoute} ändern
+                                </h3>
+                                <p style={{ color: '#888', marginBottom: '15px', fontSize: '0.9rem' }}>
+                                    Alle {days.filter(d => d.city === editingRoute).length} Tage in "{editingRoute}" werden geändert zu:
+                                </p>
+                                
+                                <select
+                                    style={{ ...styles.select, marginBottom: '20px' }}
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            updateCityInRoute(editingRoute, e.target.value);
+                                        }
+                                    }}
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>Stadt auswählen...</option>
+                                    {Object.keys(allCities).filter(c => c !== editingRoute).map(c => (
+                                        <option key={c} value={c}>{getIcon(c)} {c}</option>
+                                    ))}
+                                </select>
+                                
+                                <button 
+                                    onClick={() => setEditingRoute(null)}
+                                    style={{ ...styles.button, width: '100%', padding: '10px' }}
+                                >
+                                    Abbrechen
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
