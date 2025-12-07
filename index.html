@@ -106,9 +106,10 @@
         .btn-import { background: rgba(255,217,61,0.2); color: #ffd93d; }
         .btn-reset { background: rgba(255,107,107,0.2); color: #ff6b6b; }
         .btn-save { background: #4ecdc4; color: #fff; font-weight: bold; }
+        .btn-hotel { background: rgba(221,160,221,0.2); color: #dda0dd; }
         
-        /* Route */
-        .route-section {
+        /* Sections */
+        .section {
             background: rgba(255,255,255,0.03);
             border-radius: 20px;
             padding: 20px;
@@ -128,6 +129,7 @@
             margin-left: 10px;
         }
         
+        /* Route */
         .route-flow {
             display: flex;
             align-items: center;
@@ -337,6 +339,78 @@
             flex: 1;
         }
         
+        /* Hotels Section */
+        .hotels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        
+        .hotel-card {
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            padding: 15px;
+            border-top: 3px solid;
+        }
+        
+        .hotel-city {
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .hotel-nights {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        
+        .hotel-area {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        
+        .hotel-area strong {
+            color: #ddd;
+        }
+        
+        .hotel-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .hotel-actions .btn {
+            flex: 1;
+            padding: 5px 10px;
+            font-size: 0.75rem;
+        }
+        
+        /* Add Hotel Card */
+        .add-hotel-card {
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            padding: 15px;
+            border: 2px dashed rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            min-height: 150px;
+            transition: all 0.3s;
+        }
+        
+        .add-hotel-card:hover {
+            border-color: #dda0dd;
+        }
+        
         /* Custom Cities */
         .custom-cities {
             background: rgba(255,255,255,0.03);
@@ -441,7 +515,7 @@
             background: #1a1a2e;
             border-radius: 20px;
             padding: 25px;
-            max-width: 450px;
+            max-width: 500px;
             width: 90%;
             border: 1px solid rgba(255,255,255,0.1);
             max-height: 90vh;
@@ -552,7 +626,7 @@
         </header>
         
         <!-- Route -->
-        <div class="route-section">
+        <div class="section">
             <h2 class="section-title">
                 🗾 Route
                 <span class="section-hint">(Klicke auf eine Stadt zum Ändern)</span>
@@ -562,6 +636,15 @@
         
         <!-- Days Grid -->
         <div class="days-grid" id="daysGrid"></div>
+        
+        <!-- Accommodations -->
+        <div class="section">
+            <h2 class="section-title" style="color: #dda0dd;">
+                🏨 Unterkünfte
+                <span class="section-hint">(Klicke zum Bearbeiten)</span>
+            </h2>
+            <div class="hotels-grid" id="hotelsGrid"></div>
+        </div>
         
         <!-- Custom Cities -->
         <div class="custom-cities hidden" id="customCitiesSection">
@@ -653,6 +736,48 @@
             </div>
         </div>
     </div>
+    
+    <!-- Edit Hotel Modal -->
+    <div class="modal hidden" id="editHotelModal" onclick="closeEditHotelModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 class="modal-title" id="editHotelTitle" style="color: #dda0dd;">🏨 Unterkunft bearbeiten</h3>
+            
+            <div class="form-group">
+                <label class="modal-label">Stadt</label>
+                <select class="form-select" id="hotelCity"></select>
+            </div>
+            
+            <div class="form-group">
+                <label class="modal-label">Anzahl Nächte</label>
+                <input type="number" id="hotelNights" class="form-input" min="1" value="1">
+            </div>
+            
+            <div class="form-group">
+                <label class="modal-label">Unterkunftstyp (z.B. Hotel, Ryokan, Hostel)</label>
+                <input type="text" id="hotelType" class="form-input" placeholder="z.B. Hotel, Ryokan">
+            </div>
+            
+            <div class="form-group">
+                <label class="modal-label">Empfohlene Viertel (kommagetrennt)</label>
+                <textarea class="form-input form-textarea" id="hotelAreas" placeholder="z.B. Shinjuku, Shibuya, Asakusa"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="modal-label">Hotelempfehlungen (kommagetrennt)</label>
+                <textarea class="form-input form-textarea" id="hotelNames" placeholder="z.B. Park Hyatt, Keio Plaza"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="modal-label">Notizen</label>
+                <textarea class="form-input form-textarea" id="hotelNotes" placeholder="Zusätzliche Infos..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-save" onclick="saveHotel()">💾 Speichern</button>
+                <button class="btn" onclick="closeEditHotelModal()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Default cities
@@ -706,17 +831,27 @@
             { id: 17, date: '24. Mai', weekday: 'Sa', city: 'Abreise', title: 'Heimreise', highlights: ['✈️ Kansai Airport'] },
         ];
 
+        const initialHotels = [
+            { id: 1, city: 'Tokio', nights: 6, type: 'Hotel', areas: ['Shinjuku', 'Shibuya', 'Asakusa'], hotels: ['Park Hyatt', 'Keio Plaza', 'Shibuya Excel', 'Asakusa View Hotel'], notes: 'Shinjuku für Erstbesucher empfohlen' },
+            { id: 2, city: 'Hakone', nights: 1, type: 'Ryokan', areas: ['Gora', 'Hakone-Yumoto'], hotels: ['Gora Kadan', 'Fukuzumiro'], notes: 'Traditionell mit Onsen und Kaiseki' },
+            { id: 3, city: 'Kyoto', nights: 3, type: 'Hotel', areas: ['Downtown', 'Gion', 'Bahnhof'], hotels: ['Kyoto Hotel Okura', 'Four Seasons', 'Hotel Granvia'], notes: 'Gion für atmosphärische Abende' },
+            { id: 4, city: 'Hiroshima', nights: 2, type: 'Hotel', areas: ['Downtown', 'Bahnhof'], hotels: ['Hilton Hiroshima', 'Sheraton Grand', 'The Knot'], notes: 'Zentrum ideal für Friedenspark' },
+            { id: 5, city: 'Osaka', nights: 4, type: 'Hotel', areas: ['Umeda', 'Namba', 'Shinsaibashi'], hotels: ['Conrad Osaka', 'Namba Oriental', 'Hotel Nikko'], notes: 'Namba für Nachtleben und Street-Food' },
+        ];
+
         // State
         let days = [];
+        let hotels = [];
         let tripTitle = 'Japan-Rundreise 2025';
         let customCities = {};
         let editingDayId = null;
+        let editingHotelId = null;
         let selectedIcon = availableIcons[0];
         let selectedColor = availableColors[0];
         let changingCity = null;
 
         // Storage
-        const STORAGE_KEY = 'japan-reise-v3';
+        const STORAGE_KEY = 'japan-reise-v4';
 
         function loadData() {
             try {
@@ -724,19 +859,22 @@
                 if (saved) {
                     const data = JSON.parse(saved);
                     days = data.days || initialDays;
+                    hotels = data.hotels || initialHotels;
                     tripTitle = data.title || 'Japan-Rundreise 2025';
                     customCities = data.customCities || {};
                 } else {
                     days = JSON.parse(JSON.stringify(initialDays));
+                    hotels = JSON.parse(JSON.stringify(initialHotels));
                 }
             } catch (e) {
                 days = JSON.parse(JSON.stringify(initialDays));
+                hotels = JSON.parse(JSON.stringify(initialHotels));
             }
         }
 
         function saveData() {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ days, title: tripTitle, customCities }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ days, hotels, title: tripTitle, customCities }));
             } catch (e) {
                 console.log('Could not save');
             }
@@ -762,6 +900,7 @@
             renderStats();
             renderRoute();
             renderDays();
+            renderHotels();
             renderCustomCities();
             saveData();
         }
@@ -772,7 +911,7 @@
 
         function renderStats() {
             const cities = [...new Set(days.filter(d => d.city !== 'Abreise' && d.city !== 'Ankunft').map(d => d.city))];
-            const nights = days.length - 1;
+            const totalNights = hotels.reduce((sum, h) => sum + h.nights, 0);
             
             document.getElementById('stats').innerHTML = `
                 <div class="stat">
@@ -780,12 +919,16 @@
                     <div class="stat-label">TAGE</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-value" style="color: #ffd93d">${nights}</div>
+                    <div class="stat-value" style="color: #ffd93d">${totalNights}</div>
                     <div class="stat-label">NÄCHTE</div>
                 </div>
                 <div class="stat">
                     <div class="stat-value" style="color: #4ecdc4">${cities.length}</div>
                     <div class="stat-label">STÄDTE</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" style="color: #dda0dd">${hotels.length}</div>
+                    <div class="stat-label">UNTERKÜNFTE</div>
                 </div>
             `;
         }
@@ -890,6 +1033,43 @@
             `;
         }
 
+        function renderHotels() {
+            let html = '';
+            
+            hotels.forEach(hotel => {
+                const color = getColor(hotel.city);
+                const icon = getIcon(hotel.city);
+                
+                html += `
+                    <div class="hotel-card" style="border-top-color: ${color}">
+                        <div class="hotel-city">
+                            <span>${icon}</span>
+                            <span>${hotel.city}</span>
+                        </div>
+                        <div class="hotel-nights">${hotel.nights} ${hotel.nights === 1 ? 'Nacht' : 'Nächte'} • ${hotel.type}</div>
+                        ${hotel.areas.length > 0 ? `<div class="hotel-area"><strong>Viertel:</strong> ${hotel.areas.join(', ')}</div>` : ''}
+                        ${hotel.hotels.length > 0 ? `<div class="hotel-area"><strong>Hotels:</strong> ${hotel.hotels.join(', ')}</div>` : ''}
+                        ${hotel.notes ? `<div class="hotel-area" style="font-style: italic; color: #777;">${hotel.notes}</div>` : ''}
+                        <div class="hotel-actions">
+                            <button class="btn" onclick="editHotel(${hotel.id})">✏️ Bearbeiten</button>
+                            <button class="btn btn-delete" onclick="deleteHotel(${hotel.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="add-hotel-card" onclick="addHotel()">
+                    <div class="add-day-content">
+                        <div class="add-day-icon">🏨</div>
+                        <div>Unterkunft hinzufügen</div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('hotelsGrid').innerHTML = html;
+        }
+
         function renderCustomCities() {
             const keys = Object.keys(customCities);
             const section = document.getElementById('customCitiesSection');
@@ -916,7 +1096,7 @@
             document.getElementById('customCitiesList').innerHTML = html;
         }
 
-        // Actions
+        // Day Actions
         function editTitle() {
             document.getElementById('tripTitle').classList.add('hidden');
             document.getElementById('titleEdit').classList.remove('hidden');
@@ -986,6 +1166,73 @@
             days[index] = days[index + direction];
             days[index + direction] = temp;
             render();
+        }
+
+        // Hotel Actions
+        function addHotel() {
+            const newId = Math.max(...hotels.map(h => h.id), 0) + 1;
+            hotels.push({
+                id: newId,
+                city: 'Tokio',
+                nights: 1,
+                type: 'Hotel',
+                areas: [],
+                hotels: [],
+                notes: ''
+            });
+            editHotel(newId);
+        }
+
+        function editHotel(id) {
+            editingHotelId = id;
+            const hotel = hotels.find(h => h.id === id);
+            if (!hotel) return;
+            
+            // Populate city select
+            const allCities = getAllCities();
+            let cityOptions = '';
+            Object.keys(allCities).forEach(c => {
+                cityOptions += `<option value="${c}" ${c === hotel.city ? 'selected' : ''}>${getIcon(c)} ${c}</option>`;
+            });
+            document.getElementById('hotelCity').innerHTML = cityOptions;
+            
+            document.getElementById('hotelNights').value = hotel.nights;
+            document.getElementById('hotelType').value = hotel.type;
+            document.getElementById('hotelAreas').value = hotel.areas.join(', ');
+            document.getElementById('hotelNames').value = hotel.hotels.join(', ');
+            document.getElementById('hotelNotes').value = hotel.notes;
+            
+            document.getElementById('editHotelTitle').textContent = hotel.id ? '🏨 Unterkunft bearbeiten' : '🏨 Neue Unterkunft';
+            document.getElementById('editHotelModal').classList.remove('hidden');
+        }
+
+        function closeEditHotelModal(e) {
+            if (!e || e.target === e.currentTarget) {
+                document.getElementById('editHotelModal').classList.add('hidden');
+                editingHotelId = null;
+            }
+        }
+
+        function saveHotel() {
+            const hotel = hotels.find(h => h.id === editingHotelId);
+            if (!hotel) return;
+            
+            hotel.city = document.getElementById('hotelCity').value;
+            hotel.nights = parseInt(document.getElementById('hotelNights').value) || 1;
+            hotel.type = document.getElementById('hotelType').value || 'Hotel';
+            hotel.areas = document.getElementById('hotelAreas').value.split(',').map(a => a.trim()).filter(a => a);
+            hotel.hotels = document.getElementById('hotelNames').value.split(',').map(h => h.trim()).filter(h => h);
+            hotel.notes = document.getElementById('hotelNotes').value;
+            
+            closeEditHotelModal();
+            render();
+        }
+
+        function deleteHotel(id) {
+            if (confirm('Unterkunft wirklich löschen?')) {
+                hotels = hotels.filter(h => h.id !== id);
+                render();
+            }
         }
 
         // Add City Modal
@@ -1102,7 +1349,7 @@
 
         // Export/Import
         function exportData() {
-            const dataStr = JSON.stringify({ days, title: tripTitle, customCities }, null, 2);
+            const dataStr = JSON.stringify({ days, hotels, title: tripTitle, customCities }, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1120,6 +1367,7 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     if (data.days) days = data.days;
+                    if (data.hotels) hotels = data.hotels;
                     if (data.title) tripTitle = data.title;
                     if (data.customCities) customCities = data.customCities;
                     render();
@@ -1134,6 +1382,7 @@
         function resetData() {
             if (confirm('Alle Änderungen zurücksetzen?')) {
                 days = JSON.parse(JSON.stringify(initialDays));
+                hotels = JSON.parse(JSON.stringify(initialHotels));
                 tripTitle = 'Japan-Rundreise 2025';
                 customCities = {};
                 render();
